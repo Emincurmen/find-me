@@ -5,9 +5,13 @@ export type Stop = {
   lng: number;
   theme: string;
   historicalTeaser: string;
-  videoUrl: string; // Placeholder for AI MP4 video
+  videoUrl: string;
   poem: string[];
-  trackId: string; // Placeholder for Spotify embed track ID
+  audioUrl: string;
+  audioTitle: string;
+  audioArtist: string;
+  spotifyUrl: string;
+  spotifySearchQuery: string;
   externalMapLink: string;
 };
 
@@ -26,7 +30,11 @@ export const STORY_STOPS: Stop[] = [
       "Aşılmaz denen ne varsa hayatta,",
       "Yıkılır sevgiyle inanca."
     ],
-    trackId: "4pt5fDVTg5GhEvEtLZ9zAW", // Clarinet placeholder
+    audioUrl: "/Julide-Ozcelik-Zaman.mp3",
+    audioTitle: "Zaman",
+    audioArtist: "Jülide Özçelik",
+    spotifyUrl: "https://open.spotify.com/track/6CMfXASuKhnezF3eMHLb2y",
+    spotifySearchQuery: "Jülide Özçelik Zaman",
     externalMapLink: "https://maps.apple.com/?q=41.0258,28.9587"
   },
   {
@@ -43,7 +51,11 @@ export const STORY_STOPS: Stop[] = [
       "Ne köprüler yıkıldı ömürden,",
       "Bizim köprümüz sağlam kalpten."
     ],
-    trackId: "3n3Ppam7vgaBg1Esqf1Icy", // Piano placeholder
+    audioUrl: "/mp3indirdur-Bulent-Ortacgil-Bu-Su-Hic-Durmaz-(Akustik).mp3",
+    audioTitle: "Bu Su Hiç Durmaz",
+    audioArtist: "Bülent Ortaçgil",
+    spotifyUrl: "https://open.spotify.com/track/6CMfXASuKhnezF3eMHLb2y",
+    spotifySearchQuery: "Bülent Ortaçgil Bu Su Hiç Durmaz",
     externalMapLink: "https://maps.apple.com/?q=41.0163,28.9542"
   },
   {
@@ -60,7 +72,11 @@ export const STORY_STOPS: Stop[] = [
       "Yollar biter, menzil görünür,",
       "En güzel hediye bu ömürdür."
     ],
-    trackId: "6pMQN5Mmb0vH27E4x729Yk", // Cello placeholder
+    audioUrl: "/mp3indirdur-Ezginin-Gunlugu-Seni-Dusunmek-Guzel-Sey.mp3",
+    audioTitle: "Seni Düşünmek Güzel Şey",
+    audioArtist: "Ezginin Günlüğü",
+    spotifyUrl: "https://open.spotify.com/track/6CMfXASuKhnezF3eMHLb2y",
+    spotifySearchQuery: "Ezginin Günlüğü Seni Düşünmek Güzel Şey",
     externalMapLink: "https://maps.apple.com/?q=41.0155,28.9592"
   }
 ];

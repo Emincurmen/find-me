@@ -41,12 +41,14 @@ export const logEventToAdmin = async (tourId: string, eventType: string, details
   }
 };
 
-// --- Progress: Konum sadece gerçek değer geldiğinde yazılır ---
+// --- Progress ---
 export const updateTourProgress = async (
   tourId: string,
   stage: string,
   stopIndex: number,
-  location: { lat: number; lng: number } | null
+  location: { lat: number; lng: number } | null,
+  audioSeconds?: number | null,
+  audioStopId?: string | null   // hangi durağın şarkısı çalıyor
 ) => {
   try {
     const tourRef = doc(db, 'tours', tourId);
@@ -58,11 +60,17 @@ export const updateTourProgress = async (
     if (location !== null) {
       updateData.lastLocation = location;
     }
+    if (audioSeconds != null && audioStopId) {
+      updateData.audioSeconds = Math.round(audioSeconds);
+      updateData.audioStopId = audioStopId;   // bağlantıyı netleştir
+      updateData.audioUpdatedAt = serverTimestamp();
+    }
     await setDoc(tourRef, updateData, { merge: true });
   } catch (err) {
     console.error("Failed to update progress", err);
   }
 };
+
 
 export const getTourProgress = async (tourId: string) => {
   try {

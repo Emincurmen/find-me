@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { STORY_STOPS } from '../data/story';
 import { logEventToAdmin, updateTourProgress, getTourProgress } from '../config/firebase';
-import { MapPin, Headphones, ChevronRight, Unlock, Navigation, AlertTriangle } from 'lucide-react';
+import { MapPin, Headphones, Unlock, Navigation, AlertTriangle } from 'lucide-react';
+import { NavigationMap } from './NavigationMap';
+import { AudioPlayer } from './AudioPlayer';
 
 type Stage = 'NAVIGATING' | 'VIDEO_STAGE' | 'POEM_STAGE';
 
@@ -41,10 +43,22 @@ export const ExperienceView: React.FC<ExperienceViewProps> = ({ tourId }) => {
     loadProgress();
   }, [tourId]);
 
-  // Konum Firebase'e yaz — sadece gerçek değer gelince
-  const saveProgress = useCallback((st: Stage, idx: number, loc: { lat: number; lng: number } | null) => {
-    updateTourProgress(tourId, st, idx, loc);
+  // Konum + audio Firebase'e yaz
+  const saveProgress = useCallback((
+    st: Stage,
+    idx: number,
+    loc: { lat: number; lng: number } | null,
+    audioSec?: number | null,
+    audioStopId?: string | null
+  ) => {
+    updateTourProgress(tourId, st, idx, loc, audioSec, audioStopId);
   }, [tourId]);
+
+  // Şarkı pozisyonu: hangi durak + kaçıncı saniye
+  const handleAudioTimeUpdate = useCallback((seconds: number) => {
+    const location = lat !== null && lng !== null ? { lat, lng } : null;
+    saveProgress(stage, currentStopIndex, location, seconds, STORY_STOPS[currentStopIndex]?.id);
+  }, [lat, lng, stage, currentStopIndex, saveProgress]);
 
   useEffect(() => {
     if (!progressLoaded) return;
@@ -67,7 +81,11 @@ export const ExperienceView: React.FC<ExperienceViewProps> = ({ tourId }) => {
 
   const handleNextStop = () => {
     if (currentStopIndex < STORY_STOPS.length - 1) {
-      setCurrentStopIndex(prev => prev + 1);
+      const nextIdx = currentStopIndex + 1;
+      // Bir önceki durağın ses pozisyonunu sıfırla
+      const location = lat !== null && lng !== null ? { lat, lng } : null;
+      updateTourProgress(tourId, 'NAVIGATING', nextIdx, location, null, null);
+      setCurrentStopIndex(nextIdx);
       setStage('NAVIGATING');
       setVideoStarted(false);
     } else {
@@ -229,50 +247,71 @@ export const ExperienceView: React.FC<ExperienceViewProps> = ({ tourId }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, x: -100 }}
-            className="flex flex-col items-center justify-center flex-1 w-full p-8 max-w-md text-center min-h-screen"
+            className="flex flex-col items-center justify-start flex-1 w-full px-5 pt-10 max-w-md text-center min-h-screen"
           >
-            <MapPin size={48} className="text-[#1d2a44] mb-6" />
-            <span className="text-sm uppercase tracking-widest text-gray-400 font-semibold mb-2">Sıradaki Durak</span>
-            <h2 className="font-serif text-4xl text-[#1d2a44] mb-8">{currentStop.name}</h2>
-
-            <p className="text-gray-600 mb-12 italic text-lg leading-relaxed">
+            {/* Başlık */}
+            <div className="flex items-center gap-2 mb-1">
+              <Navigation size={16} className="text-[#1d2a44]" />
+              <span className="text-xs uppercase tracking-widest text-gray-400 font-semibold">Sıradaki Durak</span>
+            </div>
+            <h2 className="font-serif text-3xl text-[#1d2a44] mb-2">{currentStop.name}</h2>
+            <p className="text-gray-500 mb-5 italic text-sm leading-relaxed">
               "{currentStop.historicalTeaser}"
             </p>
 
-            {/* Mesafe kutusu */}
-            <div className="bg-white px-8 py-6 rounded-2xl shadow-sm border border-gray-100 w-full mb-4">
-              <p className="text-sm text-gray-500 mb-1">Kalan Mesafe</p>
-              <p className="text-3xl font-mono text-[#1d2a44] font-bold">
-                {distanceToTarget !== null
-                  ? `${Math.round(distanceToTarget)}m`
-                  : lat !== null
-                    ? 'Hesaplanıyor...'
-                    : (
-                      <span className="flex items-center justify-center gap-2 text-2xl">
-                        <span className="w-4 h-4 border-2 border-gray-300 border-t-[#1d2a44] rounded-full animate-spin inline-block" />
-                        GPS bağlanıyor
-                      </span>
-                    )
-                }
-              </p>
-              {accuracy !== null && (
-                <p className="text-xs text-gray-400 mt-1">±{Math.round(accuracy)}m doğruluk</p>
+            {/* Gömülü Harita + Rota */}
+            <div className="w-full mb-3">
+              {lat !== null && lng !== null ? (
+                <NavigationMap
+                  userLat={lat}
+                  userLng={lng}
+                  destLat={currentStop.lat}
+                  destLng={currentStop.lng}
+                  destName={currentStop.name}
+                  distanceToTarget={distanceToTarget}
+                />
+              ) : (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm w-full py-14 flex flex-col items-center justify-center gap-3">
+                  <span className="w-8 h-8 border-2 border-gray-200 border-t-[#1d2a44] rounded-full animate-spin" />
+                  <p className="text-gray-400 text-sm">GPS bağlanıyor...</p>
+                  {accuracy !== null && (
+                    <p className="text-xs text-gray-300">±{Math.round(accuracy)}m doğruluk</p>
+                  )}
+                </div>
               )}
             </div>
 
             {geoError && (
-              <p className="text-xs text-amber-600 mb-4 bg-amber-50 rounded-lg px-4 py-2 w-full text-left">
+              <p className="text-xs text-amber-600 mb-2 bg-amber-50 rounded-lg px-4 py-2 w-full text-left">
                 ⚠️ {geoError}
               </p>
             )}
 
-            <button
-              onClick={() => window.location.href = currentStop.externalMapLink}
-              className="w-full bg-[#1d2a44] text-white py-4 rounded-xl flex items-center justify-center space-x-2 shadow-lg active:scale-95 transition-transform"
-            >
-              <span>Haritada Aç</span>
-              <ChevronRight size={18} />
-            </button>
+            {/* Dış harita uygulamaları */}
+            <div className="w-full flex gap-2 mt-1 pb-8">
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${currentStop.lat},${currentStop.lng}&travelmode=walking`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 text-xs font-medium active:bg-gray-50 transition-colors no-underline shadow-sm"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#4285F4"/>
+                </svg>
+                Google Maps
+              </a>
+              <a
+                href={`https://maps.apple.com/?daddr=${currentStop.lat},${currentStop.lng}&dirflg=w`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 bg-white text-gray-600 text-xs font-medium active:bg-gray-50 transition-colors no-underline shadow-sm"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#555"/>
+                </svg>
+                Apple Maps
+              </a>
+            </div>
           </motion.div>
         )}
 
@@ -322,19 +361,19 @@ export const ExperienceView: React.FC<ExperienceViewProps> = ({ tourId }) => {
             animate={{ opacity: 1 }}
             className="flex flex-col items-center justify-start flex-1 w-full p-8 max-w-md pt-16 min-h-screen"
           >
-            <div className="flex flex-col items-center justify-center text-gray-400 mb-10 w-full">
-              <Headphones size={24} className="mb-2 animate-pulse" />
+            {/* Başlık */}
+            <div className="flex flex-col items-center justify-center text-gray-400 mb-6 w-full">
+              <Headphones size={22} className="mb-2 animate-pulse" />
               <span className="text-xs tracking-widest uppercase">Kulaklıklarını Tak</span>
             </div>
 
-            <div className="w-full mb-10 overflow-hidden rounded-xl shadow-sm border border-gray-100">
-              <iframe
-                src={`https://open.spotify.com/embed/track/${currentStop.trackId}?utm_source=generator&theme=0`}
-                width="100%"
-                height="152"
-                frameBorder="0"
-                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                loading="lazy"
+            {/* Audio Player */}
+            <div className="w-full mb-8">
+              <AudioPlayer
+                src={currentStop.audioUrl}
+                title={currentStop.audioTitle}
+                artist={currentStop.audioArtist}
+                onTimeUpdate={handleAudioTimeUpdate}
               />
             </div>
 
