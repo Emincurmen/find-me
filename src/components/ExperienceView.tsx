@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { STORY_STOPS } from '../data/story';
 import { logEventToAdmin, updateTourProgress, getTourProgress } from '../config/firebase';
-import { MapPin, Headphones, Unlock, Navigation, AlertTriangle } from 'lucide-react';
+import { Headphones, Unlock, Navigation, AlertTriangle } from 'lucide-react';
 import { NavigationMap } from './NavigationMap';
 import { AudioPlayer } from './AudioPlayer';
 
